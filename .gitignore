@@ -1,0 +1,21 @@
+# data files
+*.csv
+*.xls*
+*.htm*
+
+# env
+activate
+
+# python
+__pycache__
+*.pyc
+
+# secrets
+*secret*
+
+# pytest
+.cache/
+
+# misc
+*.swp
+.DS_Store

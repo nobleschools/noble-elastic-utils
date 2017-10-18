@@ -1,0 +1,6 @@
+elasticsearch==5.3.0
+elasticsearch-dsl==5.2.0
+pytest==3.2.1
+requests==2.17.3
+simple-salesforce==0.72.2
+-e git+https://github.com/noblenetworkcharterschools/salesforce-utils.git@bffaf4d5ec05422c2d85d5d4515edb074a55605f#egg=salesforce_utils
