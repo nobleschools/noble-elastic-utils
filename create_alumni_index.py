@@ -1,8 +1,7 @@
 """
 create_alumni_index.py
 
-Creates a shared Elasticsearch index to hold alumni data, starting
-from the FIRST_DATA_YEAR.
+Creates a shared Elasticsearch index to hold alumni data.
 
 Creates fake indices for each campus using aliases.
 cf. https://www.elastic.co/guide/en/elasticsearch/guide/current/faking-it.html
@@ -10,28 +9,21 @@ cf. https://www.elastic.co/guide/en/elasticsearch/guide/current/faking-it.html
 
 from datetime import datetime
 from os import pardir, path
-import sys
-filepath = path.abspath(__file__)
-parent_dir = path.abspath(path.join(filepath, pardir))
-package_dir = path.abspath(path.join(parent_dir, pardir))
-sys.path.insert(0, package_dir)
 
 from elasticsearch.helpers import bulk as es_bulk_action
 from elasticsearch_dsl import DocType, Index, Integer, Text
 from elasticsearch_dsl.connections import connections as es_connections
-from simple_salesforce import Salesforce
 import requests
 
-from constants import CAMPUS_SF_IDS, FIRST_DATA_YEAR
-from secrets import salesforce_secrets as sf_secrets
+from salesforce_utils.constants import CAMPUS_SF_IDS
+from salesforce_utils.get_connection import get_salesforce_connection
 from secrets.elastic_secrets import ES_CONNECTION_KEY as ES_KEY
 
 
-def bulk_alum_gen(campus, action='create'):
+def bulk_alum_gen(campus, action="create"):
     """
     Yields dictionaries of info from Salesforce for all alumni from the
-    campus given, starting from the cutoff year (FIRST_DATA_YEAR),
-    in a format ready for `elasticsearch.helpers.bulk` action.
+    campus given, in a format ready for `elasticsearch.helpers.bulk` action.
 
     The dictionaries include metadata for Elasticsearch:
         `_op_type`: action to take on document, eg. 'create', 'update', etc
@@ -51,52 +43,48 @@ def bulk_alum_gen(campus, action='create'):
     * action: action to take in elasticsearch (create, update, delete, index)
     """
     # share connection?
-    sf_connection = Salesforce(
-        username=sf_secrets.SF_LIVE_USERNAME,
-        password=sf_secrets.SF_PASSWORD,
-        security_token=sf_secrets.SF_LIVE_TOKEN,
+    sf_connection = get_salesforce_connection()
+    alumni_query = (
+        "SELECT Safe_Id__c, Network_Student_ID__c, LastName, "
+        "FirstName, Name, HS_Class__c, Facebook_ID__c, OwnerId "
+        "FROM Contact "
+        "WHERE AccountID = '{}'"
     )
-    alumni_query = ("SELECT Safe_Id__c, Network_Student_ID__c, LastName, "
-                    "FirstName, Name, HS_Class__c, Facebook_ID__c, OwnerId "
-                    "FROM Contact "
-                    "WHERE AccountID = '{}' AND HS_Class__c >= '{}'")
 
     campus_sf_id = CAMPUS_SF_IDS[campus] # or just fail
-    results = sf_connection.query(
-        alumni_query.format(campus_sf_id, FIRST_DATA_YEAR)
-    )
+    results = sf_connection.query(alumni_query.format(campus_sf_id))
 
     counts = 0 # spit out at end?
     while True:
-        for record in results['records']:
+        for record in results["records"]:
             counts += 1
             # use empty string  where no Facebook ID on file in Salesforce;
             # uniqueness not enforced in Elasticsearch
-            facebook_id = ''
-            if record['Facebook_ID__c']:
-                facebook_id = record['Facebook_ID__c']
+            facebook_id = ""
+            if record["Facebook_ID__c"]:
+                facebook_id = record["Facebook_ID__c"]
             source = {
-                'safe_id': record['Safe_Id__c'],
-                'campus': campus,
-                'last_name': record['LastName'],
-                'first_name': record['FirstName'],
-                'full_name': record['Name'],
-                'class_year': int(record['HS_Class__c']),
-                'facebook_id': facebook_id,
-                'ac_safe_id': record['OwnerId'],
+                "safe_id": record["Safe_Id__c"],
+                "campus": campus,
+                "last_name": record["LastName"],
+                "first_name": record["FirstName"],
+                "full_name": record["Name"],
+                "class_year": int(record["HS_Class__c"]),
+                "facebook_id": facebook_id,
+                "ac_safe_id": record["OwnerId"],
             }
             new_document = {
-                '_op_type': action,
-                '_index': 'alumni',
-                '_type': 'alum',
-                '_id': int(record['Network_Student_ID__c']),
-                '_source': source,
+                "_op_type": action,
+                "_index": "alumni",
+                "_type": "alum",
+                "_id": int(record["Network_Student_ID__c"]),
+                "_source": source,
             }
 
             yield new_document
 
-        if not results['done']:
-            results = sf.query_more(results['nextRecordsUrl'], True)
+        if not results["done"]:
+            results = sf.query_more(results["nextRecordsUrl"], True)
         else:
             print("{:>15}: {}".format(campus, counts))
             break
@@ -108,7 +96,7 @@ def ensure_alumni_index():
     create aliases to campuses so that they are accessed as if they were
     separate indices.
     """
-    alumni_index = Index('alumni')
+    alumni_index = Index("alumni")
 
     # build mapping for object type
     # can also be used as class decorator when defining the DocType
@@ -158,7 +146,7 @@ def add_es_alias(campus_name):
             }
         }
     }
-    dest = '{}/alumni/_alias/{}'.format(ES_KEY, campus_name)
+    dest = f"{ES_KEY}/alumni/_alias/{campus_name}"
     r = requests.put(dest, json=put_data)
     r.raise_for_status()
 
@@ -167,13 +155,13 @@ def add_es_alias(campus_name):
 
 def create_alumni_index():
     """
-    Create the index in Elasticsearch, aliases the campuses as fake indices,
-    and populates it with alumni data starting from the FIRST_DATA_YEAR.
+    Creates the alumni index in Elasticsearch, aliases the campuses as fake
+    indices, and populates the index with alumni data.
     """
     es_connection = es_connections.create_connection(hosts=[ES_KEY], timeout=20)
     ensure_alumni_index()
     for campus_name in CAMPUS_SF_IDS.keys():
-        bulk_gen = bulk_alum_gen(campus_name, action='create')
+        bulk_gen = bulk_alum_gen(campus_name, action="create")
         es_bulk_action(es_connection, bulk_gen)
 
 
