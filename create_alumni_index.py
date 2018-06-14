@@ -7,9 +7,6 @@ Creates fake indices for each campus using aliases.
 cf. https://www.elastic.co/guide/en/elasticsearch/guide/current/faking-it.html
 """
 
-from datetime import datetime
-from os import pardir, path
-
 from elasticsearch.helpers import bulk as es_bulk_action
 from elasticsearch_dsl import DocType, Index, Integer, Text
 from elasticsearch_dsl.connections import connections as es_connections
