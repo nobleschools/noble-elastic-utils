@@ -45,7 +45,7 @@ def _bulk_alum_gen(campus, action="create"):
     sf_connection = get_salesforce_connection()
     alumni_query = (
         "SELECT Safe_Id__c, Network_Student_ID__c, LastName, "
-        "FirstName, Name, HS_Class__c, Facebook_ID__c, OwnerId "
+        "FirstName, Name, HS_Class__c, OwnerId "
         "FROM Contact "
         "WHERE AccountID = '{}'"
     )
@@ -57,9 +57,6 @@ def _bulk_alum_gen(campus, action="create"):
     while True:
         for record in results["records"]:
             counts += 1
-            # use empty string where no Facebook ID on file in Salesforce;
-            # uniqueness not enforced in Elasticsearch
-            facebook_id = record["Facebook_ID__c"] or ""
             source = {
                 "safe_id": record["Safe_Id__c"],
                 "campus": campus,
@@ -67,7 +64,6 @@ def _bulk_alum_gen(campus, action="create"):
                 "first_name": record["FirstName"],
                 "full_name": record["Name"],
                 "class_year": int(record["HS_Class__c"]),
-                "facebook_id": facebook_id,
                 "ac_safe_id": record["OwnerId"],
             }
             new_document = {
@@ -107,7 +103,6 @@ def _ensure_alumni_index():
         full_name = Text()
         safe_id = Text()
         class_year = Integer()
-        facebook_id = Text()
         ac_safe_id = Text() # OwnerId field on Contact obj in Salesforce
 
     # save the index
