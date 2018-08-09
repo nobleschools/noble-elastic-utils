@@ -1,6 +1,18 @@
+asn1crypto==0.23.0
+certifi==2017.7.27.1
+cffi==1.11.2
+chardet==3.0.4
+cryptography==2.3
 elasticsearch==5.3.0
 elasticsearch-dsl==5.2.0
+idna==2.5
+py==1.4.34
+pycparser==2.18
+pyOpenSSL==17.3.0
 pytest==3.2.1
+python-dateutil==2.6.1
 requests==2.17.3
-simple-salesforce==0.72.2
--e git+https://github.com/noblenetworkcharterschools/salesforce-utils.git@bffaf4d5ec05422c2d85d5d4515edb074a55605f#egg=salesforce_utils
+-e git+https://github.com/noblenetworkcharterschools/salesforce-utils.git@3c170f6daf58e3af33b491bba6725b694c4ea5e0#egg=salesforce_utils
+simple-salesforce==0.73.0
+six==1.11.0
+urllib3==1.22
