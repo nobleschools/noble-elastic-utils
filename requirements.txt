@@ -15,4 +15,4 @@ requests==2.20.1
 -e git+https://github.com/noblenetworkcharterschools/salesforce-utils.git@3c170f6daf58e3af33b491bba6725b694c4ea5e0#egg=salesforce_utils
 simple-salesforce==0.73.0
 six==1.11.0
-urllib3==1.24.1
+urllib3==1.24.2
