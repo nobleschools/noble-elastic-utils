@@ -13,9 +13,11 @@ from elasticsearch_dsl import DocType, Index, Integer, Text
 from elasticsearch_dsl.connections import connections as es_connections
 import requests
 
+import sys; sys.path.append("..")
 from salesforce_utils.constants import CAMPUS_SF_IDS
 from salesforce_utils.get_connection import get_salesforce_connection
 from secrets.elastic_secrets import ES_CONNECTION_KEY as ES_KEY
+
 
 ALUMNI_INDEX = "alumni"
 ALUMNI_DOC_TYPE = "alum"
@@ -64,7 +66,7 @@ def _bulk_alum_gen(campus, action="create"):
                 "first_name": record["FirstName"],
                 "full_name": record["Name"],
                 "class_year": int(record["HS_Class__c"]),
-                "ac_safe_id": record["OwnerId"],
+                "owner_id": record["OwnerId"],
             }
             new_document = {
                 "_op_type": action,
@@ -151,6 +153,9 @@ def create_alumni_index():
     _ensure_alumni_index()
     for campus_name in CAMPUS_SF_IDS.keys():
         bulk_gen = _bulk_alum_gen(campus_name, action="create")
+        # could throw elasticsearch.helpers.BulkIndexError if we have a
+        # collision of network IDs (primary key in Elastic). Just letting this
+        # crash here as this needs to rectified in Salesforce anyways
         es_bulk_action(es_connection, bulk_gen)
 
 
